@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AccessGuard — Access Request & Approval Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12181F;
+    --surface: #1A222C;
+    --surface-2: #212B37;
+    --border: #2B3644;
+    --text: #E7ECF2;
+    --text-dim: #8A97A6;
+    --accent: #4FD1C5;
+    --accent-dim: #2E4E4C;
+    --amber: #E8B94E;
+    --amber-dim: #3E3624;
+    --danger: #E5828A;
+    --danger-dim: #3E2226;
+    --ok: #7FD99A;
+    --ok-dim: #223A2C;
+    --radius: 3px;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  h1, h2, h3, .mono-head { font-family: 'Space Grotesk', sans-serif; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), #2b8f86);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #0d1a19; font-size: 15px;
+    flex-shrink: 0;
+  }
+  h1 { font-size: 20px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+  .tagline { color: var(--text-dim); font-size: 13px; margin: 2px 0 0; }
+
+  .stat-row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .stat { text-align: right; }
+  .stat .num { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; display: block; line-height: 1.1; }
+  .stat .lbl { color: var(--text-dim); font-size: 12px; }
+  .stat.pending .num { color: var(--amber); }
+  .stat.approved .num { color: var(--ok); }
+  .stat.denied .num { color: var(--danger); }
+
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .panel h2 { font-size: 15px; margin: 0 0 4px; font-weight: 600; }
+  .panel .sub { color: var(--text-dim); font-size: 13px; margin: 0 0 16px; }
+
+  label { display: block; font-size: 12.5px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  textarea { resize: vertical; min-height: 56px; }
+  input:focus, select:focus, textarea:focus, button:focus, .action-btn:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .risk-note {
+    display: none;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    background: var(--amber-dim);
+    border: 1px solid #5c4f2c;
+    color: var(--amber);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .risk-note.show { display: block; }
+
+  button.submit {
+    margin-top: 16px;
+    width: 100%;
+    background: var(--accent);
+    color: #0d1a19;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 11px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  button.submit:hover { background: #63d9ce; }
+
+  .queue-list { display: flex; flex-direction: column; gap: 10px; }
+  .req-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--surface-2);
+  }
+  .req-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .req-who { font-weight: 600; font-size: 14px; }
+  .req-sys { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+  .badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge.pending { background: var(--amber-dim); color: var(--amber); }
+  .badge.approved { background: var(--ok-dim); color: var(--ok); }
+  .badge.denied { background: var(--danger-dim); color: var(--danger); }
+  .badge.privileged { background: var(--danger-dim); color: var(--danger); margin-left: 6px; }
+
+  .req-justif { color: var(--text-dim); font-size: 13px; margin: 10px 0 0; }
+  .req-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .action-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .action-btn.approve { border-color: #2c5c46; color: var(--ok); }
+  .action-btn.approve:hover { background: var(--ok-dim); }
+  .action-btn.deny { border-color: #5c2c33; color: var(--danger); }
+  .action-btn.deny:hover { background: var(--danger-dim); }
+  .req-resolved-by { color: var(--text-dim); font-size: 12px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+
+  .empty { color: var(--text-dim); font-size: 13px; padding: 20px 0; text-align: center; }
+
+  .ledger { margin-top: 20px; }
+  .ledger-item {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 14px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+  .ledger-item:last-child { border-bottom: none; }
+  .ledger-time { color: var(--text-dim); font-family: 'Space Grotesk', sans-serif; }
+  .ledger-text b { color: var(--text); font-weight: 600; }
+  .ledger-text .tag { color: var(--text-dim); }
+
+  footer { text-align: center; color: var(--text-dim); font-size: 12px; margin-top: 40px; }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .req-card { transition: border-color 0.15s ease; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark">AG</span>
+      <div>
+        <h1>AccessGuard</h1>
+        <p class="tagline">Access request &amp; approval ledger — least privilege, enforced</p>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat pending"><span class="num" id="statPending">0</span><span class="lbl">Pending</span></div>
+      <div class="stat approved"><span class="num" id="statApproved">0</span><span class="lbl">Approved</span></div>
+      <div class="stat denied"><span class="num" id="statDenied">0</span><span class="lbl">Denied</span></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Request form -->
+    <div class="panel">
+      <h2>New access request</h2>
+      <p class="sub">Submitted requests enter the queue for review.</p>
+
+      <label for="reqName">Requestor</label>
+      <input type="text" id="reqName" placeholder="e.g. Dana Ruiz — Finance">
+
+      <label for="reqSystem">System / application</label>
+      <select id="reqSystem">
+        <option>Salesforce CRM</option>
+        <option>AWS Production Console</option>
+        <option>Payroll System</option>
+        <option>Shared Drive — Finance</option>
+        <option>Okta Admin Console</option>
+        <option>GitHub Org</option>
+        <option>Customer Database (Prod)</option>
+      </select>
+
+      <label for="reqLevel">Access level</label>
+      <select id="reqLevel">
+        <option value="read">Read-only</option>
+        <option value="standard">Standard user</option>
+        <option value="privileged">Privileged / Admin</option>
+      </select>
+
+      <label for="reqJustif">Business justification</label>
+      <textarea id="reqJustif" placeholder="Why is this access needed?"></textarea>
+
+      <div class="risk-note" id="riskNote">
+        Privileged access requested. Flagged for dual review under segregation-of-duties policy — the reviewer should confirm this isn't self-approved and check for conflicting entitlements.
+      </div>
+
+      <button class="submit" id="submitBtn">Submit request</button>
+    </div>
+
+    <!-- Queue -->
+    <div class="panel">
+      <h2>Review queue</h2>
+      <p class="sub">Approve or deny outstanding requests.</p>
+      <div class="queue-list" id="queueList"></div>
+    </div>
+  </div>
+
+  <div class="panel ledger">
+    <h2>Audit log</h2>
+    <p class="sub">Immutable record of every request and decision, newest first.</p>
+    <div id="ledgerList"></div>
+  </div>
+
+  <footer>Demo data resets if you clear your browser storage · built by Jamal</footer>
+</div>
+
+<script>
+(function(){
+  const SYS_KEY = 'accessguard_state_v1';
+
+  const seed = () => ({
+    requests: [
+      { id: cryptoId(), who: 'Priya Nair — Sales', system: 'Salesforce CRM', level: 'standard', justif: 'New hire, needs pipeline access for onboarding.', status: 'pending', ts: Date.now() - 1000*60*40, resolvedBy: null },
+      { id: cryptoId(), who: 'Marcus Webb — DevOps', system: 'AWS Production Console', level: 'privileged', justif: 'On-call rotation this sprint, needs prod deploy rights.', status: 'pending', ts: Date.now() - 1000*60*95, resolvedBy: null },
+      { id: cryptoId(), who: 'Elena Torres — HR', system: 'Payroll System', level: 'standard', justif: 'Processing Q3 payroll adjustments.', status: 'approved', ts: Date.now() - 1000*60*60*5, resolvedBy: 'S. Alvarez' },
+      { id: cryptoId(), who: 'Contractor — J. Kim', system: 'Customer Database (Prod)', level: 'privileged', justif: 'Requested direct prod DB write for a one-off data fix.', status: 'denied', ts: Date.now() - 1000*60*60*26, resolvedBy: 'S. Alvarez' },
+    ],
+    log: []
+  });
+
+  function cryptoId(){ return 'r_' + Math.random().toString(36).slice(2,10); }
+
+  function load(){
+    try {
+      const raw = localStorage.getItem(SYS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e) { /* storage unavailable, fall through to seed */ }
+    const s = seed();
+    s.log = s.requests.map(r => ({
+      ts: r.ts,
+      text: r.status === 'pending'
+        ? `<b>${r.who}</b> requested <span class="tag">${r.level}</span> access to <b>${r.system}</b>`
+        : `<b>${r.resolvedBy}</b> ${r.status} <b>${r.who}</b>'s request for <b>${r.system}</b>`
+    }));
+    save(s);
+    return s;
+  }
+
+  function save(state){
+    try { localStorage.setItem(SYS_KEY, JSON.stringify(state)); } catch(e) { /* ignore */ }
+  }
+
+  let state = load();
+
+  function fmtTime(ts){
+    const diffMin = Math.round((Date.now() - ts) / 60000);
+    if (diffMin < 1) return 'now';
+    if (diffMin < 60) return diffMin + 'm ago';
+    const diffH = Math.round(diffMin/60);
+    if (diffH < 24) return diffH + 'h ago';
+    return Math.round(diffH/24) + 'd ago';
+  }
+
+  function levelLabel(l){
+    return l === 'read' ? 'Read-only' : l === 'privileged' ? 'Privileged / Admin' : 'Standard';
+  }
+
+  function render(){
+    const pending = state.requests.filter(r => r.status === 'pending').sort((a,b)=>b.ts-a.ts);
+    const resolved = state.requests.filter(r => r.status !== 'pending');
+
+    document.getElementById('statPending').textContent = pending.length;
+    document.getElementById('statApproved').textContent = state.requests.filter(r=>r.status==='approved').length;
+    document.getElementById('statDenied').textContent = state.requests.filter(r=>r.status==='denied').length;
+
+    const queueList = document.getElementById('queueList');
+    queueList.innerHTML = '';
+    if (pending.length === 0) {
+      queueList.innerHTML = '<div class="empty">Queue is clear — no pending requests.</div>';
+    } else {
+      pending.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'req-card';
+        card.innerHTML = `
+          <div class="req-top">
+            <div>
+              <div class="req-who">${escapeHtml(r.who)}</div>
+              <div class="req-sys">${escapeHtml(r.system)} · ${levelLabel(r.level)}${r.level==='privileged' ? '<span class="badge privileged">Elevated</span>' : ''}</div>
+            </div>
+            <span class="badge pending">Pending · ${fmtTime(r.ts)}</span>
+          </div>
+          <p class="req-justif">${escapeHtml(r.justif || 'No justification provided.')}</p>
+          <div class="req-actions">
+            <button class="action-btn approve" data-id="${r.id}" data-action="approved">Approve</button>
+            <button class="action-btn deny" data-id="${r.id}" data-action="denied">Deny</button>
+          </div>
+        `;
+        queueList.appendChild(card);
+      });
+    }
+
+    const ledgerList = document.getElementById('ledgerList');
+    const sortedLog = [...state.log].sort((a,b)=>b.ts-a.ts).slice(0, 30);
+    ledgerList.innerHTML = sortedLog.map(entry => `
+      <div class="ledger-item">
+        <div class="ledger-time">${fmtTime(entry.ts)}</div>
+        <div class="ledger-text">${entry.text}</div>
+      </div>
+    `).join('') || '<div class="empty">No activity yet.</div>';
+
+    queueList.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', () => resolveRequest(btn.dataset.id, btn.dataset.action));
+    });
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function resolveRequest(id, action){
+    const req = state.requests.find(r => r.id === id);
+    if (!req) return;
+    req.status = action;
+    req.resolvedBy = 'You (Reviewer)';
+    state.log.push({
+      ts: Date.now(),
+      text: `<b>You</b> ${action} <b>${escapeHtml(req.who)}</b>'s request for <b>${escapeHtml(req.system)}</b>`
+    });
+    save(state);
+    render();
+  }
+
+  document.getElementById('reqLevel').addEventListener('change', (e) => {
+    document.getElementById('riskNote').classList.toggle('show', e.target.value === 'privileged');
+  });
+
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    const who = document.getElementById('reqName').value.trim();
+    const system = document.getElementById('reqSystem').value;
+    const level = document.getElementById('reqLevel').value;
+    const justif = document.getElementById('reqJustif').value.trim();
+
+    if (!who) {
+      document.getElementById('reqName').focus();
+      return;
+    }
+
+    const newReq = {
+      id: cryptoId(), who, system, level, justif,
+      status: 'pending', ts: Date.now(), resolvedBy: null
+    };
+    state.requests.push(newReq);
+    state.log.push({
+      ts: Date.now(),
+      text: `<b>${escapeHtml(who)}</b> requested <span class="tag">${levelLabel(level)}</span> access to <b>${escapeHtml(system)}</b>`
+    });
+    save(state);
+
+    document.getElementById('reqName').value = '';
+    document.getElementById('reqJustif').value = '';
+    document.getElementById('reqLevel').value = 'read';
+    document.getElementById('riskNote').classList.remove('show');
+
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
